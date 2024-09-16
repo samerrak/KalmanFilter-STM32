@@ -97,6 +97,29 @@ int Kalmanfilter(float* InputArray, float* OutputArray, kalman_state* kstate, in
 	arm_conv_f32(orgArr, 5, finalArr, 5, conv); //convolution
 }
 
+int KalmanfilterCMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length) {
+    
+    float intermediateResult1, intermediateResult2;
+
+    for (int i = 0; i < Length; i++) {
+        arm_add_f32(&kstate->p, &kstate->q, &kstate->p, 1); // p = p + q
+
+        intermediateResult1 = kstate->p + kstate->r; // p + r
+        arm_div_f32(kstate->p, intermediateResult1, &kstate->k); // k = p / (p + r)
+
+        arm_sub_f32(&InputArray[i], &kstate->x, &temp1, 1); // (measurement - x)
+        arm_mult_f32(&kstate->k, &intermediateResult1, &intermediateResult2, 1); // k * (measurement - x)
+        arm_add_f32(&kstate->x, &intermediateResult2, &kstate->x, 1); // x = x + k * (measurement - x)
+
+        intermediateResult1 = 1.0f - kstate->k;
+        arm_mult_f32(&intermediateResult1, &kstate->p, &kstate->p, 1); // p = (1 - k) * p
+
+        OutputArray[i] = kstate->x;
+    }
+
+    return 0;
+}
+
 
 /* USER CODE END PD */
 

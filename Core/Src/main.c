@@ -120,6 +120,56 @@ int KalmanfilterCMSIS(float* InputArray, float* OutputArray, kalman_state* kstat
     return 0;
 }
 
+void ComputeDifferenceArrays(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
+    for (int i = 0; i < Length; i++) {
+        ResultArray[i] = InputArray1[i] - InputArray2[i];
+    }
+}
+
+void ComputeAverageAndStandardDeviationArray(float* InputArray, float* Average, float* StandardDeviation, , int Length) {
+    float sum = 0.0, squaredSum = 0.0;
+
+    for (int i = 0; i < Length; i++) {
+        sum += InputArray[i];
+        squaredSum += InputArray[i] * InputArray[i];
+    }
+
+    *Average = sum / Length;
+    *StandardDeviation = sqrt((squaredSum / Length) - (*Average) * (*Average));
+}
+
+void ComputeCorrelationArrays(float* InputArray1, float* InputArray2, float* Correlation, int Length) {
+    float squaredSum1 = 0.0, squaredSum2 = 0.0, sum12 = 0.0, sum1 = 0.0, sum2 = 0.0;
+
+    for (int i = 0; i < Length; i++) {
+        squaredSum1 += InputArray1[i] * InputArray1[i];
+        squaredSum2 += InputArray2[i] * InputArray2[i];
+        sum12 += InputArray1[i] * InputArray2[i];
+        sum1 += InputArray1[i];
+        sum2 += InputArray2[i];
+    }
+
+    float denominator = sqrt(((Length * squaredSum1) - (sum1 * sum1)) * ((Length * squaredSum2) - (sum2 * sum2)));
+
+    if (denominator == 0) {
+        return; 
+    }
+
+    float numerator = (Length * sum12) - (sum1 * sum2);
+
+    *Correlation = numerator / denominator;
+}
+
+void ComputeConvolutionArrays(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
+    for (int i = 0; i < Length; i++) {
+        ResultArray[i] = 0.0;
+        for (int j = 0; j < Length; j++) {
+            if (i - j >= 0) {
+                ResultArray[i] += InputArray1[j] * InputArray2[i - j];
+            }
+        }
+    }
+}
 
 /* USER CODE END PD */
 

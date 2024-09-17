@@ -126,7 +126,7 @@ void ComputeDifferenceArrays(float* InputArray1, float* InputArray2, float* Resu
     }
 }
 
-void ComputeAverageAndStandardDeviationArray(float* InputArray, float* Average, float* StandardDeviation, , int Length) {
+void ComputeAverageAndStandardDeviationArray(float* InputArray, float* Average, float* StandardDeviation, int Length) {
     float sum = 0.0, squaredSum = 0.0;
 
     for (int i = 0; i < Length; i++) {

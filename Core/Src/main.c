@@ -97,7 +97,7 @@ int Kalmanfilter(float* InputArray, float* OutputArray, kalman_state* kstate, in
 	arm_conv_f32(orgArr, 5, finalArr, 5, conv); //convolution
 }
 
-int KalmanfilterCMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length) {
+int KalmanCMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length) {
     
     float intermediateResult1, intermediateResult2;
 
@@ -120,7 +120,7 @@ int KalmanfilterCMSIS(float* InputArray, float* OutputArray, kalman_state* kstat
     return 0;
 }
 
-void ComputeDifferenceArrays(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
+void computeDifferenceArrays(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
     for (int i = 0; i < Length; i++) {
         ResultArray[i] = InputArray1[i] - InputArray2[i];
     }

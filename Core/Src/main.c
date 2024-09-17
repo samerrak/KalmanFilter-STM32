@@ -63,7 +63,7 @@ arm_status status;       /* Status of the example */
 /* USER CODE BEGIN PD */
 #define ITM_Port32(n) (*((volatile unsigned long *) (0xE0000000+4*n)))
 
-float kalmanC(kalman_state* kstate, float measurement) {
+float KalmanC(kalman_state* kstate, float measurement) {
 	for (int i=0; i<Length; i++) {
 		kstate->p = kstate->p + kstate->q;
 		kstate->k = kstate->p / ( kstate->p +  kstate->r );
@@ -120,7 +120,7 @@ int KalmanCMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int
     return 0;
 }
 
-void computeDifferenceArrays(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
+void ComputeDifferenceArrays(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
     for (int i = 0; i < Length; i++) {
         ResultArray[i] = InputArray1[i] - InputArray2[i];
     }

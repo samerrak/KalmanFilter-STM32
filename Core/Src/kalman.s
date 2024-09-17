@@ -36,8 +36,8 @@ kalman:
 	VMUL.f32 s4, s4, s6 // (1-k) * p
 
 	VSTR.f32 s4, [r0, #12] //store p into where it was loaded from
-	VSTR.f32 s1, [r0, #16] //store p into where it was loaded from
-	VSTR.f32 s3, [r0, #8] //store p into where it was loaded from
+	VSTR.f32 s1, [r0, #16] //store k into where it was loaded from
+	VSTR.f32 s3, [r0, #8] //store x into where it was loaded from
 
 	VLDMIA SP!, {s1-s6}
 

@@ -1,0 +1,16 @@
+../Core/Src/main.c:68:7:updateC	16	static
+../Core/Src/main.c:76:7:updateCMSIS	32	static
+../Core/Src/main.c:93:6:ComputeDifferenceArraysC	32	static
+../Core/Src/main.c:99:6:ComputeAverageAndStandardDeviationArrayC	40	static
+../Core/Src/main.c:112:6:ComputeConvolutionArraysC	32	static
+../Core/Src/main.c:121:6:ComputeCorrelationArraysC	64	dynamic
+../Core/Src/main.c:142:6:ComputeDifferenceArraysCMSIS	24	static
+../Core/Src/main.c:148:6:ComputeAverageAndStandardDeviationArrayCMSIS	24	static
+../Core/Src/main.c:154:6:ComputeCorrelationArraysCMSIS	40	static
+../Core/Src/main.c:163:6:ComputeConvolutionArraysCMSIS	32	static
+../Core/Src/main.c:169:5:KalmanfilterARM	32	static
+../Core/Src/main.c:181:5:KalmanfilterCMSIS	40	static
+../Core/Src/main.c:192:5:KalmanfilterC	40	static
+../Core/Src/main.c:232:5:main	248	dynamic
+../Core/Src/main.c:309:6:SystemClock_Config	96	static
+../Core/Src/main.c:363:6:Error_Handler	4	static,ignoring_inline_asm

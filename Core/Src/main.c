@@ -192,7 +192,7 @@ void ComputeCorrelationArraysCMSIS(float* InputArray1, float* InputArray2, float
 }
 
 void ComputeConvolutionArraysCMSIS(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
-	arm_conv_f32(InputArray1, Length, InputArray2, Length, ResultArray);
+	arm_conv_f32(InputArray1, Length, InputArray2, Length, ResultArray); 
 }
 
 
@@ -258,7 +258,7 @@ int main(void)
   kalman_state ksARM = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
   int Length = 5;
 
-  // Input and output arrays
+  // Input and output arrays 
   float InputArray[] = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f};
   float OutputArrayC[Length], OutputArrayCMSIS[Length], OutputArrayASM[Length];
 
@@ -268,55 +268,29 @@ int main(void)
   KalmanfilterARM(InputArray, OutputArrayASM, &ksARM, Length);
 
   // Arrays and float for comparing the outputs between implementations
-  float Difference_C_vs_InputLength], Difference_CMSIS_vs_Input[Length];
-  float Correlation_C_vs_CMSIS[(2 * Length - 1)], Correlation_C_vs_ASM[(2 * Length - 1)], Correlation_CMSIS_vs_ASM[(2 * Length - 1)];
-  float Convolution_C_vs_CMSIS[(2 * Length - 1)], Convolution_C_vs_ASM[(2 * Length - 1)], Convolution_CMSIS_vs_ASM[(2 * Length - 1)];
-  float StdDev_C_vs_CMSIS, Avg_C_vs_CMSIS;
-  float StdDev_C_vs_ASM, Avg_C_vs_ASM;
-  float StdDev_CMSIS_vs_ASM, Avg_CMSIS_vs_ASM;
+  float Difference_C[Length], Difference_CMSIS[Length]
+  float Correlation_C[(2 * Length - 1)], Correlation_CMSIS[(2 * Length - 1)];
+  float Convolution_C[(2 * Length - 1)], Convolution_CMSIS[(2 * Length - 1)];
+  float StdDev_C, Avg_C;
+  float StdDev_CMSIS, Avg_CMSIS;
 
-  //---- ANALYSES USING C ----//
-
-  // Compute output differences
-  ComputeDifferenceArraysC(OutputArrayC, InputArray, Difference_C_vs_Input, Length);
-  ComputeDifferenceArraysCMSIS(OutputArrayCMSIS, InputArray, Difference_CMSIS_vs_Input, Length);
-
-  // Compute average and standard deviation for each of these difference arrays
-  ComputeAverageAndStandardDeviationArrayC(Difference_C_vs_CMSIS, &Avg_C_vs_CMSIS, &StdDev_C_vs_CMSIS, Length);
-  ComputeAverageAndStandardDeviationArrayC(Difference_C_vs_ASM, &Avg_C_vs_ASM, &StdDev_C_vs_ASM, Length);
-  ComputeAverageAndStandardDeviationArrayC(Difference_CMSIS_vs_ASM, &Avg_CMSIS_vs_ASM, &StdDev_CMSIS_vs_ASM, Length);
-
-  // Correlation between outputs
-  ComputeCorrelationArraysC(OutputArrayC, OutputArrayCMSIS, Correlation_C_vs_CMSIS, Length);
-  ComputeCorrelationArraysC(OutputArrayC, OutputArrayASM, Correlation_C_vs_ASM, Length);
-  ComputeCorrelationArraysC(OutputArrayCMSIS, OutputArrayASM, Correlation_CMSIS_vs_ASM, Length);
-
-  // Convolution between outputs
-  ComputeConvolutionArraysC(OutputArrayC, OutputArrayCMSIS, Convolution_C_vs_CMSIS, Length);
-  ComputeConvolutionArraysC(OutputArrayC, OutputArrayASM, Convolution_C_vs_ASM, Length);
-  ComputeConvolutionArraysC(OutputArrayCMSIS, OutputArrayASM, Convolution_CMSIS_vs_ASM, Length);
-
-  //--- ANALYSES USING CMSIS ---//
+  //-------- ANALYSES -------//
 
   // Compute output differences
-  ComputeDifferenceArraysCMSIS(OutputArrayC, OutputArrayCMSIS, Difference_C_vs_CMSIS, Length);
-  ComputeDifferenceArraysCMSIS(OutputArrayC, OutputArrayASM, Difference_C_vs_ASM, Length);
-  ComputeDifferenceArraysCMSIS(OutputArrayCMSIS, OutputArrayASM, Difference_CMSIS_vs_ASM, Length);
+  ComputeDifferenceArraysC(InputArray, OutputArrayC, Difference_C, Length);
+  ComputeDifferenceArraysCMSIS(InputArray, OutputArrayCMSIS, Difference_CMSIS, Length);
 
   // Compute average and standard deviation for each of these difference arrays
-  ComputeAverageAndStandardDeviationArrayCMSIS(Difference_C_vs_CMSIS, &Avg_C_vs_CMSIS, &StdDev_C_vs_CMSIS, Length);
-  ComputeAverageAndStandardDeviationArrayCMSIS(Difference_C_vs_ASM, &Avg_C_vs_ASM, &StdDev_C_vs_ASM, Length);
-  ComputeAverageAndStandardDeviationArrayCMSIS(Difference_CMSIS_vs_ASM, &Avg_CMSIS_vs_ASM, &StdDev_CMSIS_vs_ASM, Length);
+  ComputeAverageAndStandardDeviationArrayC(Difference_C, &Avg_C, &StdDev_C, Length);
+  ComputeAverageAndStandardDeviationArrayCMSIS(Difference_CMSIS, &Avg_CMSIS, &StdDev_CMSIS, Length);
 
   // Correlation between outputs
-  ComputeCorrelationArraysCMSIS(OutputArrayC, OutputArrayCMSIS, Correlation_C_vs_CMSIS, Length);
-  ComputeCorrelationArraysCMSIS(OutputArrayC, OutputArrayASM, Correlation_C_vs_ASM, Length);
-  ComputeCorrelationArraysCMSIS(OutputArrayCMSIS, OutputArrayASM, Correlation_CMSIS_vs_ASM, Length);
+  ComputeCorrelationArraysC(InputArray, OutputArrayC, Correlation_C, Length);
+  ComputeCorrelationArraysCMSIS(InputArray, OutputArrayCMSIS, Correlation_CMSIS, Length);
 
   // Convolution between outputs
-  ComputeConvolutionArraysCMSIS(OutputArrayC, OutputArrayCMSIS, Convolution_C_vs_CMSIS, Length);
-  ComputeConvolutionArraysCMSIS(OutputArrayC, OutputArrayASM, Convolution_C_vs_ASM, Length);
-  ComputeConvolutionArraysCMSIS(OutputArrayCMSIS, OutputArrayASM, Convolution_CMSIS_vs_ASM, Length);
+  ComputeConvolutionArraysC(InputArray, OutputArrayC, Convolution_C, Length);
+  ComputeConvolutionArraysCMSIS(InputArray, OutputArrayCMSIS, Convolution_CMSIS, Length);
 
   /* USER CODE END 2 */
 

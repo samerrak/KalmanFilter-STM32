@@ -192,7 +192,7 @@ void ComputeCorrelationArraysCMSIS(float* InputArray1, float* InputArray2, float
 }
 
 void ComputeConvolutionArraysCMSIS(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
-	arm_conv_f32(InputArray1, Length, InputArray2, Length, ResultArray); 
+	arm_conv_f32(InputArray1, Length, InputArray2, Length, ResultArray);
 }
 
 
@@ -258,7 +258,7 @@ int main(void)
   kalman_state ksARM = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
   int Length = 5;
 
-  // Input and output arrays 
+  // Input and output arrays
   float InputArray[] = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f};
   float OutputArrayC[Length], OutputArrayCMSIS[Length], OutputArrayASM[Length];
 
@@ -268,7 +268,7 @@ int main(void)
   KalmanfilterARM(InputArray, OutputArrayASM, &ksARM, Length);
 
   // Arrays and float for comparing the outputs between implementations
-  float Difference_C_vs_CMSIS[Length], Difference_C_vs_ASM[Length], Difference_CMSIS_vs_ASM[Length];
+  float Difference_C_vs_InputLength], Difference_CMSIS_vs_Input[Length];
   float Correlation_C_vs_CMSIS[(2 * Length - 1)], Correlation_C_vs_ASM[(2 * Length - 1)], Correlation_CMSIS_vs_ASM[(2 * Length - 1)];
   float Convolution_C_vs_CMSIS[(2 * Length - 1)], Convolution_C_vs_ASM[(2 * Length - 1)], Convolution_CMSIS_vs_ASM[(2 * Length - 1)];
   float StdDev_C_vs_CMSIS, Avg_C_vs_CMSIS;
@@ -278,9 +278,8 @@ int main(void)
   //---- ANALYSES USING C ----//
 
   // Compute output differences
-  ComputeDifferenceArraysC(OutputArrayC, OutputArrayCMSIS, Difference_C_vs_CMSIS, Length);
-  ComputeDifferenceArraysC(OutputArrayC, OutputArrayASM, Difference_C_vs_ASM, Length);
-  ComputeDifferenceArraysC(OutputArrayCMSIS, OutputArrayASM, Difference_CMSIS_vs_ASM, Length);
+  ComputeDifferenceArraysC(OutputArrayC, InputArray, Difference_C_vs_Input, Length);
+  ComputeDifferenceArraysCMSIS(OutputArrayCMSIS, InputArray, Difference_CMSIS_vs_Input, Length);
 
   // Compute average and standard deviation for each of these difference arrays
   ComputeAverageAndStandardDeviationArrayC(Difference_C_vs_CMSIS, &Avg_C_vs_CMSIS, &StdDev_C_vs_CMSIS, Length);
@@ -296,7 +295,7 @@ int main(void)
   ComputeConvolutionArraysC(OutputArrayC, OutputArrayCMSIS, Convolution_C_vs_CMSIS, Length);
   ComputeConvolutionArraysC(OutputArrayC, OutputArrayASM, Convolution_C_vs_ASM, Length);
   ComputeConvolutionArraysC(OutputArrayCMSIS, OutputArrayASM, Convolution_CMSIS_vs_ASM, Length);
-  
+
   //--- ANALYSES USING CMSIS ---//
 
   // Compute output differences

@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #define ARM_MATH_CM4
 #include "arm_math.h"
+#include <cmsis_gcc.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -68,26 +69,61 @@ arm_status status;       /* Status of the example */
 
 
 float updateC(kalman_state* kstate, float measurement) {
-	kstate->p = kstate->p + kstate->q;
-	kstate->k = kstate->p / ( kstate->p +  kstate->r );
-	kstate->x = kstate->x + kstate->k * (measurement - kstate->x);
-	kstate->p = (1 - kstate->k) * kstate->p;
+	float temp_p = kstate->p + kstate->q;
+	float temp_k = temp_p / (temp_p + kstate->r);
+	float temp_x = kstate->x + temp_k * (measurement - kstate->x);
+	float temp_p_updated = (1 - temp_k) * temp_p;
+
+	// Step 2: Update kstate based on a condition
+
+
+	// check for error
+	uint32_t err =  __get_FPSCR();
+	err = err & 0x0000000F;
+	__set_FPSCR(0);
+
+	if (err > 0) {
+		return -1;
+	}
+
+	kstate->p = temp_p;
+	kstate->k = temp_k;
+	kstate->x = temp_x;
+	kstate->p = temp_p_updated;
+
 	return kstate->x;
 }
 
 float updateCMSIS(kalman_state* kstate, float measurement) {
 
-    float32_t temp1, temp2;
+    float32_t temp1, temp2, temp_p, temp_k, temp_x;
     float32_t k = 1.0f;
 
-	arm_add_f32(&kstate->p, &kstate->q, &kstate->p, 1); // p = p + q
-	arm_add_f32(&kstate->p, &kstate->r, &temp1, 1); // temp1 = p + r
-	kstate->k = kstate->p / temp1;  // k = p / (p + r)
+	arm_add_f32(&kstate->p, &kstate->q, &temp_p, 1); // p = p + q
+	arm_add_f32(&temp_p, &kstate->r, &temp1, 1); // temp1 = p + r
+	temp_k = temp_p / temp1;  // k = p / (p + r)
 	arm_sub_f32(&measurement, &kstate->x, &temp1, 1); // temp1 = (measurement - x)
-	arm_mult_f32(&kstate->k, &temp1, &temp2, 1); // temp2 = k * (measurement - x)
-	arm_add_f32(&kstate->x, &temp2, &kstate->x, 1); // x = x + k * (measurement - x)
-	arm_sub_f32(&k, &kstate->k, &temp1, 1); // temp1 = (1 - k)
-	arm_mult_f32(&temp1, &kstate->p, &kstate->p, 1); // p = (1 - k) * p
+	arm_mult_f32(&temp_k, &temp1, &temp2, 1); // temp2 = k * (measurement - x)
+	arm_add_f32(&kstate->x, &temp2, &temp_x, 1); // x = x + k * (measurement - x)
+	arm_sub_f32(&k, &temp_k, &temp1, 1); // temp1 = (1 - k)
+	arm_mult_f32(&temp1, &temp_p, &temp_p, 1); // p = (1 - k) * p
+
+	/* check for error
+	uint32_t err =  __get_FPSCR();
+	err = err & 0x0000000F;
+	__set_FPSCR(0);
+
+	if (err > 0) {
+		return -1;
+	}**/
+
+	kstate->p = temp_p;
+	kstate->k = temp_k;
+	kstate->x = temp_x;
+	kstate->p = temp_p;
+
+
+
     return kstate->x;
 }
 
@@ -100,8 +136,8 @@ int KalmanfilterARM(float* InputArray, float* OutputArray, kalman_state* kstate,
 		if (isnan(kstate->x) > 0)
 			return 1;
 
-		kalman(kstate, InputArray[i]); // change to kalman for .s function
-		OutputArray[i]= kstate->x;
+		OutputArray[i] = kalman(kstate, InputArray[i]); // change to kalman for .s function
+
 	}
 	return 0;
 }
@@ -145,10 +181,11 @@ void ComputeAverageAndStandardDeviationArrayC(float* InputArray, float* Average,
 
 
 void ComputeConvolutionArraysC(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
-	ResultArray[0] = 0.0;
-	for (int i = 0; i < Length; i++) {
+	for (int i = 0; i < (2*Length - 1); i++) {
+		ResultArray[i] = 0.0f;
         for (int j = 0; j < Length; j++) {
-        	ResultArray[i+j] += InputArray1[i] * InputArray2[j];
+        	if (i-j >= 0 && i-j < Length)
+        		ResultArray[i] += InputArray1[j] * InputArray2[i-j];
         }
     }
 }
@@ -192,7 +229,7 @@ void ComputeCorrelationArraysCMSIS(float* InputArray1, float* InputArray2, float
 }
 
 void ComputeConvolutionArraysCMSIS(float* InputArray1, float* InputArray2, float* ResultArray, int Length) {
-	arm_conv_f32(InputArray1, Length, InputArray2, Length, ResultArray); 
+	arm_conv_f32(InputArray1, Length, InputArray2, Length, ResultArray);
 }
 
 
@@ -249,49 +286,72 @@ int main(void)
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
-
-  //------------------------------ MAIN ---------------------------------//
-
   // Kalman filter states
-  kalman_state ksC = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
-  kalman_state ksCMSIS = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
-  kalman_state ksARM = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
-  int Length = 5;
+    kalman_state ksC = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
+    kalman_state ksCMSIS = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
+    kalman_state ksARM = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
 
-  // Input and output arrays 
-  float InputArray[] = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f};
-  float OutputArrayC[Length], OutputArrayCMSIS[Length], OutputArrayASM[Length];
 
-  // Run each implementation of the Kalman filter
-  KalmanfilterC(InputArray, OutputArrayC, &ksC, Length);
-  KalmanfilterCMSIS(InputArray, OutputArrayCMSIS, &ksCMSIS, Length);
-  KalmanfilterARM(InputArray, OutputArrayASM, &ksARM, Length);
+    // Input and output arrays
+    float InputArray[] = {10.4915760032, 10.1349974709, 9.53992591829, 9.60311878706,
+            10.4858891793, 10.1104642352, 9.51066931906, 9.75755656493,
+            9.82154078273, 10.2906541933, 10.4861328671, 9.57321181356,
+            9.70882714139, 10.4359069357, 9.70644021369, 10.2709894039,
+            10.0823149505, 10.2954563443, 9.57130449017, 9.66832136479,
+            10.4521677502, 10.4287240667, 10.1833650752, 10.0066049721,
+            10.3279461634, 10.4767210803, 10.3790964606, 10.1937408814,
+            10.0318963522, 10.4939180917, 10.2381858895, 9.59703103024,
+            9.62757986516, 10.1816981174, 9.65703773168, 10.3905666599,
+            10.0941977598, 9.93515274393, 9.71017053437, 10.0303874259,
+            10.0173504397, 9.69022731474, 9.73902896102, 9.52524419732,
+            10.3270730526, 9.54695650657, 10.3573960542, 9.88773266876,
+            10.1685038683, 10.1683694089, 9.88406620159, 10.3290065898,
+            10.2547227265, 10.4733422906, 10.0133952458, 10.4205693583,
+            9.71335255372, 9.89061396699, 10.1652744131, 10.2580948608,
+            10.3465431058, 9.98446410493, 9.79376005657, 10.202518901,
+            9.83867150985, 9.89532986869, 10.2885062658, 9.97748768804,
+            10.0403923759, 10.1538911808, 9.78303667556, 9.72420149909,
+            9.59117495073, 10.1716116012, 10.2015818969, 9.90650056596,
+            10.3251329834, 10.4550120431, 10.4925749165, 10.1548177178,
+            9.60547133785, 10.4644672766, 10.2326496615, 10.2279703226,
+            10.3535284606, 10.2437410625, 10.3851531317, 9.90784804928,
+            9.98208344925, 9.52778805729, 9.69323876912, 9.92987312087,
+            9.73938925207, 9.60543743477, 9.79600805462, 10.4950988486,
+            10.2814361401, 9.7985283333, 9.6287888922, 10.4491538991,
+            9.5799256668};
 
-  // Arrays and float for comparing the outputs between implementations
-  float Difference_C[Length], Difference_CMSIS[Length]
-  float Correlation_C[(2 * Length - 1)], Correlation_CMSIS[(2 * Length - 1)];
-  float Convolution_C[(2 * Length - 1)], Convolution_CMSIS[(2 * Length - 1)];
-  float StdDev_C, Avg_C;
-  float StdDev_CMSIS, Avg_CMSIS;
+    int Length = sizeof(InputArray)/sizeof(float);
+    float OutputArrayC[Length], OutputArrayCMSIS[Length], OutputArrayASM[Length];
 
-  //-------- ANALYSES -------//
+    // Run each implementation of the Kalman filter
+    KalmanfilterC(InputArray, OutputArrayC, &ksC, Length);
+    KalmanfilterCMSIS(InputArray, OutputArrayCMSIS, &ksCMSIS, Length);
+    KalmanfilterARM(InputArray, OutputArrayASM, &ksARM, Length);
 
-  // Compute output differences
-  ComputeDifferenceArraysC(InputArray, OutputArrayC, Difference_C, Length);
-  ComputeDifferenceArraysCMSIS(InputArray, OutputArrayCMSIS, Difference_CMSIS, Length);
+    // Arrays and float for comparing the outputs between implementations
+    float Difference_C[Length], Difference_CMSIS[Length];
+    float Correlation_C[(2 * Length - 1)], Correlation_CMSIS[(2 * Length - 1)];
+    float Convolution_C[(2 * Length - 1)], Convolution_CMSIS[(2 * Length - 1)];
+    float StdDev_C, Avg_C;
+    float StdDev_CMSIS, Avg_CMSIS;
 
-  // Compute average and standard deviation for each of these difference arrays
-  ComputeAverageAndStandardDeviationArrayC(Difference_C, &Avg_C, &StdDev_C, Length);
-  ComputeAverageAndStandardDeviationArrayCMSIS(Difference_CMSIS, &Avg_CMSIS, &StdDev_CMSIS, Length);
+    //-------- ANALYSES -------//
 
-  // Correlation between outputs
-  ComputeCorrelationArraysC(InputArray, OutputArrayC, Correlation_C, Length);
-  ComputeCorrelationArraysCMSIS(InputArray, OutputArrayCMSIS, Correlation_CMSIS, Length);
+    // Compute output differences
+    ComputeDifferenceArraysC(InputArray, OutputArrayC, Difference_C, Length);
+    ComputeDifferenceArraysCMSIS(InputArray, OutputArrayCMSIS, Difference_CMSIS, Length);
 
-  // Convolution between outputs
-  ComputeConvolutionArraysC(InputArray, OutputArrayC, Convolution_C, Length);
-  ComputeConvolutionArraysCMSIS(InputArray, OutputArrayCMSIS, Convolution_CMSIS, Length);
+    // Compute average and standard deviation for each of these difference arrays
+    ComputeAverageAndStandardDeviationArrayC(Difference_C, &Avg_C, &StdDev_C, Length);
+    ComputeAverageAndStandardDeviationArrayCMSIS(Difference_CMSIS, &Avg_CMSIS, &StdDev_CMSIS, Length);
 
+    // Correlation between outputs
+    ComputeCorrelationArraysC(InputArray, OutputArrayC, Correlation_C, Length);
+    ComputeCorrelationArraysCMSIS(InputArray, OutputArrayCMSIS, Correlation_CMSIS, Length);
+
+    // Convolution between outputs
+    ComputeConvolutionArraysC(InputArray, OutputArrayC, Convolution_C, Length);
+    ComputeConvolutionArraysCMSIS(InputArray, OutputArrayCMSIS, Convolution_CMSIS, Length);
   /* USER CODE END 2 */
 
   /* Infinite loop */

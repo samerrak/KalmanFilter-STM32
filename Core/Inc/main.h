@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-extern void kalman(float *array, float measurement);
+extern float kalman(float *array, float measurement);
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

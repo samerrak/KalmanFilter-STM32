@@ -14,6 +14,7 @@
 kalman:
 
 	VSTMDB SP!, {s1-s6} // push temperory variables to the stack
+	push {r1}
 	VLDR.f32 s1, [r0] //load q into first available floating register s1
 	VLDR.f32 s2, [r0, #4] //load r into floating register s2
 	VLDR.f32 s3, [r0, #8] //load x into floating register s3
@@ -35,10 +36,32 @@ kalman:
 	VSUB.f32 s6, s6, s1 // (1 - k)
 	VMUL.f32 s4, s4, s6 // (1-k) * p
 
+	VMRS r1, FPSCR // load FPSCR Register
+
+	AND r1, r1, 0xF // check for errors using mask
+
+	CMP r1, #0 // compare it with 0
+
+	BEQ no_err // if equal to 0 update state and return x
+
+	MOV r1, #0
+
+	VMSR FPSCR, r1 //reset FPSCR
+	VMOV.f32 s0, #-1
+
+	B restore // restore
+
+
+no_err:
+
 	VSTR.f32 s4, [r0, #12] //store p into where it was loaded from
 	VSTR.f32 s1, [r0, #16] //store k into where it was loaded from
 	VSTR.f32 s3, [r0, #8] //store x into where it was loaded from
+	VMOV.f32 s0, s3 //move x into s0
+
+restore:
 
 	VLDMIA SP!, {s1-s6}
+	pop {r1}
 
 	BX LR

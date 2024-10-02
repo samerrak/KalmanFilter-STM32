@@ -75,8 +75,6 @@ float updateC(kalman_state* kstate, float measurement) {
 	float temp_p_updated = (1 - temp_k) * temp_p;
 
 	// Step 2: Update kstate based on a condition
-
-
 	// check for error
 	uint32_t err =  __get_FPSCR();
 	err = err & 0x0000000F;
@@ -108,21 +106,19 @@ float updateCMSIS(kalman_state* kstate, float measurement) {
 	arm_sub_f32(&k, &temp_k, &temp1, 1); // temp1 = (1 - k)
 	arm_mult_f32(&temp1, &temp_p, &temp_p, 1); // p = (1 - k) * p
 
-	/* check for error
+	// check for error
 	uint32_t err =  __get_FPSCR();
 	err = err & 0x0000000F;
 	__set_FPSCR(0);
 
 	if (err > 0) {
 		return -1;
-	}**/
+	}
 
 	kstate->p = temp_p;
 	kstate->k = temp_k;
 	kstate->x = temp_x;
 	kstate->p = temp_p;
-
-
 
     return kstate->x;
 }
@@ -135,9 +131,7 @@ int KalmanfilterARM(float* InputArray, float* OutputArray, kalman_state* kstate,
 	for (int i=0; i<Length; i++) {
 		if (isnan(kstate->x) > 0)
 			return 1;
-
 		OutputArray[i] = kalman(kstate, InputArray[i]); // change to kalman for .s function
-
 	}
 	return 0;
 }
@@ -236,28 +230,16 @@ void ComputeConvolutionArraysCMSIS(float* InputArray1, float* InputArray2, float
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
-/* USER CODE BEGIN PV */
 
-/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-
 /**
   * @brief  The application entry point.
   * @retval int
@@ -265,37 +247,20 @@ static void MX_GPIO_Init(void);
 int main(void)
 {
 
-	/* USER CODE BEGIN 1 */
-
-	/* USER CODE END 1 */
-
 	/* MCU Configuration--------------------------------------------------------*/
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
 	HAL_Init();
 
-	/* USER CODE BEGIN Init */
-
-	/* USER CODE END Init */
-
 	/* Configure the system clock */
 	SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
-
-	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	/* USER CODE BEGIN 2 */
-	// Kalman filter states
 
-	kalman_state ksC = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
-	kalman_state ksCMSIS = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
-	kalman_state ksARM = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
-
-
-// Input and output arrays
+	// Input measurement array
 	float InputArray[] = {10.4915760032, 10.1349974709, 9.53992591829, 9.60311878706,
 		10.4858891793, 10.1104642352, 9.51066931906, 9.75755656493,
 		9.82154078273, 10.2906541933, 10.4861328671, 9.57321181356,
@@ -323,65 +288,84 @@ int main(void)
 		10.2814361401, 9.7985283333, 9.6287888922, 10.4491538991,
 		9.5799256668};
 
+	// Output Arrays
 	int Length = sizeof(InputArray)/sizeof(float);
-	float OutputArrayC[Length], OutputArrayCMSIS[Length], OutputArrayASM[Length];
+	float OutputArrayC[Length], OutputArrayCMSIS[Length], OutputArrayARM[Length];
 
-	// Run each implementation of the Kalman filter
-	KalmanfilterC(InputArray, OutputArrayC, &ksC, Length);
-	KalmanfilterCMSIS(InputArray, OutputArrayCMSIS, &ksCMSIS, Length);
-	KalmanfilterARM(InputArray, OutputArrayASM, &ksARM, Length);
 
-	// Arrays and float for comparing the outputs between implementations
+
+	// Arrays and float for comparing the outputs between implementations for upcoming subroutines
 	float Difference_C[Length], Difference_CMSIS[Length];
 	float Correlation_C[(2 * Length - 1)], Correlation_CMSIS[(2 * Length - 1)];
 	float Convolution_C[(2 * Length - 1)], Convolution_CMSIS[(2 * Length - 1)];
 	float StdDev_C, Avg_C;
 	float StdDev_CMSIS, Avg_CMSIS;
 
-	/**-------- ANALYSES -------
+	ITM_Port32(31) = 1;
 
-	// Compute output differences
+	// To record the average run time of the C Kalman Filter
+	for (int i=0;  i<1000; i++) {
+		kalman_state ksC = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
+		KalmanfilterC(InputArray, OutputArrayC, &ksC, Length);
+	}
+	ITM_Port32(31) = 2;
+
+	// To record the average run time of the C Kalman Filter
+	for (int i=0;  i<1000; i++) {
+		kalman_state ksCMSIS = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
+		KalmanfilterCMSIS(InputArray, OutputArrayCMSIS, &ksCMSIS, Length);
+	}
+	ITM_Port32(31) = 3;
+
+	// To record the average run time of the ARM Kalman Filter
+	for (int i=0;  i<1000; i++) {
+		kalman_state ksARM = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
+		KalmanfilterARM(InputArray, OutputArrayARM, &ksARM, Length);
+	}
+	ITM_Port32(31) = 4;
+
+	// Use SWV Trace Log to compute subroutine times
+
+	for (int i=0;  i<1000; i++) {
+		ComputeDifferenceArraysC(InputArray, OutputArrayC, Difference_C, Length);
+		ComputeAverageAndStandardDeviationArrayC(Difference_C, &Avg_C, &StdDev_C, Length);
+		ComputeCorrelationArraysC(InputArray, OutputArrayC, Correlation_C, Length);
+		ComputeConvolutionArraysC(InputArray, OutputArrayC, Convolution_C, Length);
+	}
+	ITM_Port32(31) = 5;
+
+
+	for (int i=0;  i<1000; i++) {
+		ComputeDifferenceArraysCMSIS(InputArray, OutputArrayCMSIS, Difference_CMSIS, Length);
+		ComputeAverageAndStandardDeviationArrayCMSIS(Difference_CMSIS, &Avg_CMSIS, &StdDev_CMSIS, Length);
+		ComputeCorrelationArraysCMSIS(InputArray, OutputArrayCMSIS, Correlation_CMSIS, Length);
+		ComputeConvolutionArraysCMSIS(InputArray, OutputArrayCMSIS, Convolution_CMSIS, Length);
+	}
+	ITM_Port32(31) = 6;
+
+
+	/* UNCOMMENT THIS BLOCK OF CODE TO ONLY RUN EVERYTHING ONCE
+
+	kalman_state ksARM = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
+	kalman_state ksC = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
+	kalman_state ksCMSIS = {0.1f, 0.1f, 5.0f, 0.1f, 0.0f};
+
+	KalmanfilterC(InputArray, OutputArrayC, &ksC, Length);
+	KalmanfilterCMSIS(InputArray, OutputArrayCMSIS, &ksCMSIS, Length);
+	KalmanfilterARM(InputArray, OutputArrayASM, &ksARM, Length);
+
 	ComputeDifferenceArraysC(InputArray, OutputArrayC, Difference_C, Length);
-	ComputeDifferenceArraysCMSIS(InputArray, OutputArrayCMSIS, Difference_CMSIS, Length);
-
-	// Compute average and standard deviation for each of these difference arrays
 	ComputeAverageAndStandardDeviationArrayC(Difference_C, &Avg_C, &StdDev_C, Length);
-	ComputeAverageAndStandardDeviationArrayCMSIS(Difference_CMSIS, &Avg_CMSIS, &StdDev_CMSIS, Length);
-
-	// Correlation between outputs
 	ComputeCorrelationArraysC(InputArray, OutputArrayC, Correlation_C, Length);
-	ComputeCorrelationArraysCMSIS(InputArray, OutputArrayCMSIS, Correlation_CMSIS, Length);
-
-	// Convolution between outputs
 	ComputeConvolutionArraysC(InputArray, OutputArrayC, Convolution_C, Length);
+
+
+	ComputeDifferenceArraysCMSIS(InputArray, OutputArrayCMSIS, Difference_CMSIS, Length);
+	ComputeAverageAndStandardDeviationArrayCMSIS(Difference_CMSIS, &Avg_CMSIS, &StdDev_CMSIS, Length);
+	ComputeCorrelationArraysCMSIS(InputArray, OutputArrayCMSIS, Correlation_CMSIS, Length);
 	ComputeConvolutionArraysCMSIS(InputArray, OutputArrayCMSIS, Convolution_CMSIS, Length);
 
 	**/
-
-	/* Use SVW to find run times */
-	ITM_Port32(31) = 1;
-	ComputeDifferenceArraysC(InputArray, OutputArrayC, Difference_C, Length);
-	ITM_Port32(31) = 2;
-	ComputeDifferenceArraysCMSIS(InputArray, OutputArrayCMSIS, Difference_CMSIS, Length);
-	ITM_Port32(31) = 3;
-	ComputeAverageAndStandardDeviationArrayC(Difference_C, &Avg_C, &StdDev_C, Length);
-	ITM_Port32(31) = 4;
-	ComputeAverageAndStandardDeviationArrayCMSIS(Difference_CMSIS, &Avg_CMSIS, &StdDev_CMSIS, Length);
-	ITM_Port32(31) = 5;
-	ComputeCorrelationArraysC(InputArray, OutputArrayC, Correlation_C, Length);
-	ITM_Port32(31) = 6;
-	ComputeCorrelationArraysCMSIS(InputArray, OutputArrayCMSIS, Correlation_CMSIS, Length);
-	ITM_Port32(31) = 7;
-	ComputeConvolutionArraysC(InputArray, OutputArrayC, Convolution_C, Length);
-	ITM_Port32(31) = 8;
-	ComputeConvolutionArraysCMSIS(InputArray, OutputArrayCMSIS, Convolution_CMSIS, Length);
-	ITM_Port32(31) = 9;
-
-
-
-
-
-
 
   /* USER CODE END 2 */
 
